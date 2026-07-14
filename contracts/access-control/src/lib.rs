@@ -11,7 +11,7 @@ fn only_admin(env: &Env, caller: &Address) {
     assert_eq!(caller.clone(), admin, "AccessControl: caller is not admin");
 }
 
-fn only_operator_or_admin(env: &Env, caller: &Address) {
+pub fn only_operator_or_admin(env: &Env, caller: &Address) {
     caller.require_auth();
     let admin: Address = env.storage().instance().get(&ADMIN).unwrap();
     if caller.clone() == admin {
