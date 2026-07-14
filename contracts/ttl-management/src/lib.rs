@@ -1,5 +1,7 @@
 #![no_std]
-use soroban_sdk::{contract, contractimpl, contracttype, symbol_short, Address, Bytes, Env, Symbol, Vec};
+use soroban_sdk::{
+    contract, contractimpl, contracttype, symbol_short, Address, Bytes, Env, Symbol, Vec,
+};
 
 #[contracttype]
 #[derive(Clone)]
@@ -43,7 +45,9 @@ impl TtlManagement {
         };
 
         env.storage().persistent().set(&key, &entry);
-        env.storage().persistent().extend_ttl(&key, ttl_ledgers, ttl_ledgers + LIVE_LEDGERS);
+        env.storage()
+            .persistent()
+            .extend_ttl(&key, ttl_ledgers, ttl_ledgers + LIVE_LEDGERS);
 
         let mut entries: Vec<Symbol> = env.storage().instance().get(&ENTRIES).unwrap();
         entries.push_back(key);
@@ -73,7 +77,9 @@ impl TtlManagement {
         let mut entry: DataEntry = env.storage().persistent().get(&key).unwrap();
         entry.ttl_ledgers = ttl_ledgers;
         env.storage().persistent().set(&key, &entry);
-        env.storage().persistent().extend_ttl(&key, ttl_ledgers, ttl_ledgers + LIVE_LEDGERS);
+        env.storage()
+            .persistent()
+            .extend_ttl(&key, ttl_ledgers, ttl_ledgers + LIVE_LEDGERS);
     }
 
     pub fn entries(env: &Env) -> Vec<Symbol> {
@@ -108,7 +114,13 @@ mod tests {
 
             let key = symbol_short!("DATA1");
             let value = Bytes::from_array(&env, &[1, 2, 3, 4]);
-            TtlManagement::write(env.clone(), admin.clone(), key.clone(), value.clone(), 100_000);
+            TtlManagement::write(
+                env.clone(),
+                admin.clone(),
+                key.clone(),
+                value.clone(),
+                100_000,
+            );
 
             let entry = TtlManagement::read(&env, key.clone()).unwrap();
             assert_eq!(entry.value, value);

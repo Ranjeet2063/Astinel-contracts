@@ -1,7 +1,6 @@
 #![no_std]
 use soroban_sdk::{
-    contract, contractimpl, contracttype, symbol_short,
-    Address, BytesN, Env, Symbol,
+    contract, contractimpl, contracttype, symbol_short, Address, BytesN, Env, Symbol,
 };
 
 const BALANCE: Symbol = symbol_short!("BALANCE");
@@ -91,7 +90,9 @@ impl StellarAsset {
         let bal = Self::balance(&env, to.clone());
         Self::set_balance(&env, &to, bal + amount);
         let supply = Self::total_supply(&env);
-        env.storage().instance().set(&TOTAL_SUPPLY, &(supply + amount));
+        env.storage()
+            .instance()
+            .set(&TOTAL_SUPPLY, &(supply + amount));
         let mut meta = Self::metadata(&env);
         meta.total_supply = supply + amount;
         env.storage().instance().set(&METADATA, &meta);
@@ -104,7 +105,9 @@ impl StellarAsset {
         assert!(bal >= amount, "SAFE: insufficient balance");
         Self::set_balance(&env, &from, bal - amount);
         let supply = Self::total_supply(&env);
-        env.storage().instance().set(&TOTAL_SUPPLY, &(supply - amount));
+        env.storage()
+            .instance()
+            .set(&TOTAL_SUPPLY, &(supply - amount));
     }
 
     pub fn transfer(env: Env, from: Address, to: Address, amount: i128) {
@@ -127,10 +130,19 @@ impl StellarAsset {
         }
     }
 
-    pub fn approve(env: Env, owner: Address, spender: Address, amount: i128, expiration_ledger: u32) {
+    pub fn approve(
+        env: Env,
+        owner: Address,
+        spender: Address,
+        amount: i128,
+        expiration_ledger: u32,
+    ) {
         owner.require_auth();
         let key = (owner, spender);
-        let allowance = AllowanceValue { amount, expiration_ledger };
+        let allowance = AllowanceValue {
+            amount,
+            expiration_ledger,
+        };
         env.storage().persistent().set(&key, &allowance);
     }
 
@@ -144,7 +156,10 @@ impl StellarAsset {
         let key = (from.clone(), spender);
         let existing: AllowanceValue = env.storage().persistent().get(&key).unwrap();
         let remaining = existing.amount - amount;
-        let updated = AllowanceValue { amount: remaining, ..existing };
+        let updated = AllowanceValue {
+            amount: remaining,
+            ..existing
+        };
         env.storage().persistent().set(&key, &updated);
         Self::set_balance(&env, &from, from_bal - amount);
         Self::set_balance(&env, &to, Self::balance(&env, to.clone()) + amount);
@@ -188,7 +203,12 @@ mod tests {
         env.mock_all_auths();
         env.as_contract(&contract_id, || {
             let admin = Address::generate(&env);
-            StellarAsset::init(env.clone(), admin.clone(), make_name(&env), make_symbol(&env));
+            StellarAsset::init(
+                env.clone(),
+                admin.clone(),
+                make_name(&env),
+                make_symbol(&env),
+            );
             assert_eq!(StellarAsset::decimals(&env), 7);
             assert_eq!(StellarAsset::total_supply(&env), 0);
         });
@@ -202,7 +222,12 @@ mod tests {
             let admin = Address::generate(&env);
             let alice = Address::generate(&env);
             let bob = Address::generate(&env);
-            StellarAsset::init(env.clone(), admin.clone(), make_name(&env), make_symbol(&env));
+            StellarAsset::init(
+                env.clone(),
+                admin.clone(),
+                make_name(&env),
+                make_symbol(&env),
+            );
             StellarAsset::mint(env.clone(), admin.clone(), alice.clone(), 1000);
             assert_eq!(StellarAsset::balance(&env, alice.clone()), 1000);
             assert_eq!(StellarAsset::total_supply(&env), 1000);
@@ -219,7 +244,12 @@ mod tests {
         env.as_contract(&contract_id, || {
             let admin = Address::generate(&env);
             let user = Address::generate(&env);
-            StellarAsset::init(env.clone(), admin.clone(), make_name(&env), make_symbol(&env));
+            StellarAsset::init(
+                env.clone(),
+                admin.clone(),
+                make_name(&env),
+                make_symbol(&env),
+            );
             StellarAsset::mint(env.clone(), admin.clone(), user.clone(), 1000);
             StellarAsset::burn(env.clone(), user.clone(), user.clone(), 400);
             assert_eq!(StellarAsset::balance(&env, user), 600);

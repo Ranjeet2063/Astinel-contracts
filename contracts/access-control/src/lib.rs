@@ -18,7 +18,10 @@ pub fn only_operator_or_admin(env: &Env, caller: &Address) {
         return;
     }
     let operators: Vec<Address> = env.storage().instance().get(&OPERATORS).unwrap();
-    assert!(operators.contains(caller), "AccessControl: caller is not operator or admin");
+    assert!(
+        operators.contains(caller),
+        "AccessControl: caller is not operator or admin"
+    );
 }
 
 #[contract]

@@ -1,8 +1,5 @@
 #![no_std]
-use soroban_sdk::{
-    contract, contractimpl, symbol_short,
-    Address, Bytes, BytesN, Env, Symbol,
-};
+use soroban_sdk::{contract, contractimpl, symbol_short, Address, Bytes, BytesN, Env, Symbol};
 
 const ADMIN: Symbol = symbol_short!("ADMIN");
 const IMPLEMENTATION: Symbol = symbol_short!("IMPL");
@@ -16,7 +13,8 @@ impl Upgradeable {
     pub fn init(env: Env, admin: Address, wasm_hash: BytesN<32>, version: u32) {
         env.storage().instance().set(&ADMIN, &admin);
         #[cfg(not(test))]
-        env.deployer().update_current_contract_wasm(wasm_hash.clone());
+        env.deployer()
+            .update_current_contract_wasm(wasm_hash.clone());
         env.storage().instance().set(&IMPLEMENTATION, &wasm_hash);
         env.storage().instance().set(&VERSION, &version);
     }
@@ -41,10 +39,16 @@ impl Upgradeable {
 
     pub fn upgrade(env: Env, caller: Address, new_wasm_hash: BytesN<32>, new_version: u32) {
         Self::only_admin(&env, &caller);
-        assert!(new_version > Self::version(&env), "Upgradeable: new version must be greater");
+        assert!(
+            new_version > Self::version(&env),
+            "Upgradeable: new version must be greater"
+        );
         #[cfg(not(test))]
-        env.deployer().update_current_contract_wasm(new_wasm_hash.clone());
-        env.storage().instance().set(&IMPLEMENTATION, &new_wasm_hash);
+        env.deployer()
+            .update_current_contract_wasm(new_wasm_hash.clone());
+        env.storage()
+            .instance()
+            .set(&IMPLEMENTATION, &new_wasm_hash);
         env.storage().instance().set(&VERSION, &new_version);
     }
 

@@ -16,12 +16,17 @@ pub struct Payable;
 #[contractimpl]
 impl Payable {
     pub fn init(env: Env, admin: Address) {
-        env.storage().instance().set(&Symbol::new(&env, "ADMIN"), &admin);
+        env.storage()
+            .instance()
+            .set(&Symbol::new(&env, "ADMIN"), &admin);
         env.storage().instance().set(&TOTAL_SUPPLY, &0_i128);
     }
 
     pub fn admin(env: &Env) -> Address {
-        env.storage().instance().get(&Symbol::new(env, "ADMIN")).unwrap()
+        env.storage()
+            .instance()
+            .get(&Symbol::new(env, "ADMIN"))
+            .unwrap()
     }
 
     fn only_admin(env: &Env, caller: &Address) {
@@ -55,7 +60,9 @@ impl Payable {
         let bal = Self::balance(&env, to.clone());
         Self::set_balance(&env, &to, bal + amount);
         let supply = Self::total_supply(&env);
-        env.storage().instance().set(&TOTAL_SUPPLY, &(supply + amount));
+        env.storage()
+            .instance()
+            .set(&TOTAL_SUPPLY, &(supply + amount));
     }
 
     pub fn transfer(env: Env, from: Address, to: Address, amount: i128) {
@@ -78,11 +85,20 @@ impl Payable {
         }
     }
 
-    pub fn approve(env: Env, owner: Address, spender: Address, amount: i128, expiration_ledger: u32) {
+    pub fn approve(
+        env: Env,
+        owner: Address,
+        spender: Address,
+        amount: i128,
+        expiration_ledger: u32,
+    ) {
         owner.require_auth();
         assert!(amount >= 0, "Payable: amount must be non-negative");
         let key = (owner, spender);
-        let allowance = AllowanceValue { amount, expiration_ledger };
+        let allowance = AllowanceValue {
+            amount,
+            expiration_ledger,
+        };
         env.storage().persistent().set(&key, &allowance);
     }
 
@@ -96,7 +112,10 @@ impl Payable {
         allowed -= amount;
         let key = (from.clone(), spender);
         let existing: AllowanceValue = env.storage().persistent().get(&key).unwrap();
-        let updated = AllowanceValue { amount: allowed, ..existing };
+        let updated = AllowanceValue {
+            amount: allowed,
+            ..existing
+        };
         env.storage().persistent().set(&key, &updated);
         let to_bal = Self::balance(&env, to.clone());
         Self::set_balance(&env, &from, from_bal - amount);
@@ -157,8 +176,17 @@ mod tests {
             Payable::mint(env.clone(), admin.clone(), owner.clone(), 1000);
             let expiration = env.ledger().sequence() + 1000;
             Payable::approve(env.clone(), owner.clone(), spender.clone(), 500, expiration);
-            assert_eq!(Payable::allowance(&env, owner.clone(), spender.clone()), 500);
-            Payable::transfer_from(env.clone(), spender.clone(), owner.clone(), admin.clone(), 200);
+            assert_eq!(
+                Payable::allowance(&env, owner.clone(), spender.clone()),
+                500
+            );
+            Payable::transfer_from(
+                env.clone(),
+                spender.clone(),
+                owner.clone(),
+                admin.clone(),
+                200,
+            );
             assert_eq!(Payable::allowance(&env, owner, spender), 300);
         });
     }
