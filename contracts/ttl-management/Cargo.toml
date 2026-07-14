@@ -1,0 +1,17 @@
+[package]
+name = "astinel-ttl-management"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+soroban-sdk = { workspace = true }
+
+[target.'cfg(not(target_family = "wasm"))'.dependencies]
+ed25519-dalek = { workspace = true }
+
+[features]
+testutils = ["soroban-sdk/testutils"]
