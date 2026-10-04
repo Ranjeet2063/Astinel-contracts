@@ -76,6 +76,7 @@ impl TtlManagement {
         assert!(ttl_ledgers > 0, "TTL: ttl_ledgers must be positive");
         let mut entry: DataEntry = env.storage().persistent().get(&key).unwrap();
         entry.ttl_ledgers = ttl_ledgers;
+        entry.created_at = env.ledger().sequence();
         env.storage().persistent().set(&key, &entry);
         env.storage()
             .persistent()
@@ -89,7 +90,8 @@ impl TtlManagement {
     pub fn remaining_ttl(env: &Env, key: Symbol) -> Option<u32> {
         let entry: DataEntry = env.storage().persistent().get(&key)?;
         let elapsed = env.ledger().sequence().saturating_sub(entry.created_at);
-        Some(entry.ttl_ledgers.saturating_sub(elapsed))
+        let total_ttl = entry.ttl_ledgers.saturating_add(LIVE_LEDGERS);
+        Some(total_ttl.saturating_sub(elapsed))
     }
 }
 
@@ -145,5 +147,53 @@ mod tests {
             TtlManagement::remove(env.clone(), admin2.clone(), key.clone());
             assert!(TtlManagement::read(&env, key).is_none());
         });
+    }
+
+    #[test]
+    fn test_remaining_ttl_includes_live_ledgers_and_tracks_extension() {
+        use soroban_sdk::testutils::Ledger as _;
+
+        let (env, contract_id) = create_env();
+        env.mock_all_auths();
+        let client = TtlManagementClient::new(&env, &contract_id);
+        let admin = Address::generate(&env);
+        client.init(&admin);
+
+        let key = symbol_short!("DATA_TTL");
+        let value = Bytes::from_array(&env, &[42]);
+        let write_ttl = 100_000u32;
+
+        // Initial state: non-existent key returns None
+        assert_eq!(client.remaining_ttl(&key), None);
+
+        // Set ledger sequence to 10 and write entry
+        env.ledger().set_sequence_number(10);
+        client.write(&admin, &key, &value, &write_ttl);
+
+        // Formula: ttl_ledgers + LIVE_LEDGERS - elapsed
+        // At sequence 10, elapsed = 0 -> remaining = 100_000 + 500_000 = 600_000
+        let expected_initial = write_ttl + LIVE_LEDGERS;
+        assert_eq!(client.remaining_ttl(&key), Some(expected_initial));
+
+        // Advance ledger sequence by 20 ledgers (to 30)
+        env.ledger().set_sequence_number(30);
+        let expected_after_advance = expected_initial - 20;
+        assert_eq!(client.remaining_ttl(&key), Some(expected_after_advance));
+
+        // Advance further by 30 ledgers (to 60)
+        env.ledger().set_sequence_number(60);
+        assert_eq!(client.remaining_ttl(&key), Some(expected_initial - 50));
+
+        // Extend TTL to 200,000 ledgers at sequence 60
+        let new_ttl = 200_000u32;
+        client.extend_ttl(&admin, &key, &new_ttl);
+
+        // Elapsed is reset relative to sequence 60, remaining is now new_ttl + LIVE_LEDGERS
+        let expected_after_extend = new_ttl + LIVE_LEDGERS;
+        assert_eq!(client.remaining_ttl(&key), Some(expected_after_extend));
+
+        // Advance by 40 ledgers to 100
+        env.ledger().set_sequence_number(100);
+        assert_eq!(client.remaining_ttl(&key), Some(expected_after_extend - 40));
     }
 }
